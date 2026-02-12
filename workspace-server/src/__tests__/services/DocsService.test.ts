@@ -569,7 +569,7 @@ describe('DocsService', () => {
       const result = await docsService.getText({ documentId: 'test-doc-id' });
 
       expect(result.content[0].text).toBe(
-        'Meeting on Jan 15, 2025 with John Doe - see Project Plan\n',
+        'Meeting on Jan 15, 2025 with [John Doe](mailto:john@example.com) - see [Project Plan](https://docs.google.com/document/d/abc123)\n',
       );
     });
 
@@ -605,10 +605,10 @@ describe('DocsService', () => {
 
       const result = await docsService.getText({ documentId: 'test-doc-id' });
 
-      expect(result.content[0].text).toBe('jane@example.com');
+      expect(result.content[0].text).toBe('[jane@example.com](mailto:jane@example.com)');
     });
 
-    it('should fall back to uri when rich link title is not available', async () => {
+    it('should render rich link as markdown link', async () => {
       const mockDoc = {
         data: {
           tabs: [
@@ -622,6 +622,7 @@ describe('DocsService', () => {
                           {
                             richLink: {
                               richLinkProperties: {
+                                title: 'Budget Spreadsheet',
                                 uri: 'https://docs.google.com/spreadsheets/d/xyz',
                               },
                             },
@@ -641,7 +642,7 @@ describe('DocsService', () => {
       const result = await docsService.getText({ documentId: 'test-doc-id' });
 
       expect(result.content[0].text).toBe(
-        'https://docs.google.com/spreadsheets/d/xyz',
+        '[Budget Spreadsheet](https://docs.google.com/spreadsheets/d/xyz)',
       );
     });
 
