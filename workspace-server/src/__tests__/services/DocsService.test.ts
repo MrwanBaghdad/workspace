@@ -492,6 +492,179 @@ describe('DocsService', () => {
         index: 1,
       });
     });
+
+    it('should extract text from smart chips (date, person, rich link)', async () => {
+      const mockDoc = {
+        data: {
+          tabs: [
+            {
+              documentTab: {
+                body: {
+                  content: [
+                    {
+                      paragraph: {
+                        elements: [
+                          {
+                            textRun: { content: 'Meeting on ' },
+                          },
+                          {
+                            dateElement: {
+                              dateElementProperties: {
+                                displayText: 'Jan 15, 2025',
+                                timestamp: '1736899200',
+                              },
+                            },
+                          },
+                          {
+                            textRun: { content: ' with ' },
+                          },
+                          {
+                            person: {
+                              personProperties: {
+                                name: 'John Doe',
+                                email: 'john@example.com',
+                              },
+                            },
+                          },
+                          {
+                            textRun: { content: ' - see ' },
+                          },
+                          {
+                            richLink: {
+                              richLinkProperties: {
+                                title: 'Project Plan',
+                                uri: 'https://docs.google.com/document/d/abc123',
+                              },
+                            },
+                          },
+                          {
+                            textRun: { content: '\n' },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      };
+      mockDocsAPI.documents.get.mockResolvedValue(mockDoc);
+
+      const result = await docsService.getText({ documentId: 'test-doc-id' });
+
+      expect(result.content[0].text).toBe(
+        'Meeting on Jan 15, 2025 with John Doe - see Project Plan\n',
+      );
+    });
+
+    it('should fall back to email when person name is not available', async () => {
+      const mockDoc = {
+        data: {
+          tabs: [
+            {
+              documentTab: {
+                body: {
+                  content: [
+                    {
+                      paragraph: {
+                        elements: [
+                          {
+                            person: {
+                              personProperties: {
+                                email: 'jane@example.com',
+                              },
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      };
+      mockDocsAPI.documents.get.mockResolvedValue(mockDoc);
+
+      const result = await docsService.getText({ documentId: 'test-doc-id' });
+
+      expect(result.content[0].text).toBe('jane@example.com');
+    });
+
+    it('should fall back to uri when rich link title is not available', async () => {
+      const mockDoc = {
+        data: {
+          tabs: [
+            {
+              documentTab: {
+                body: {
+                  content: [
+                    {
+                      paragraph: {
+                        elements: [
+                          {
+                            richLink: {
+                              richLinkProperties: {
+                                uri: 'https://docs.google.com/spreadsheets/d/xyz',
+                              },
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      };
+      mockDocsAPI.documents.get.mockResolvedValue(mockDoc);
+
+      const result = await docsService.getText({ documentId: 'test-doc-id' });
+
+      expect(result.content[0].text).toBe(
+        'https://docs.google.com/spreadsheets/d/xyz',
+      );
+    });
+
+    it('should fall back to timestamp when date displayText is not available', async () => {
+      const mockDoc = {
+        data: {
+          tabs: [
+            {
+              documentTab: {
+                body: {
+                  content: [
+                    {
+                      paragraph: {
+                        elements: [
+                          {
+                            dateElement: {
+                              dateElementProperties: {
+                                timestamp: '1736899200',
+                              },
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      };
+      mockDocsAPI.documents.get.mockResolvedValue(mockDoc);
+
+      const result = await docsService.getText({ documentId: 'test-doc-id' });
+
+      expect(result.content[0].text).toBe('1736899200');
+    });
   });
 
   describe('appendText', () => {
